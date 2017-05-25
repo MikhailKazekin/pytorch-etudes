@@ -26,7 +26,6 @@ class SinNet(Module):
 
 if __name__ == '__main__':
 
-
     sin_net = SinNet()
 
     x_tr = Variable(torch.rand(1, 1)).cuda()
@@ -38,7 +37,7 @@ if __name__ == '__main__':
     criterion_fn = torch.nn.MSELoss(size_average=False)
     optimizer = torch.optim.SGD(sin_net.parameters(), lr=1e-4)
 
-    for i in range(50):
+    for epoch in range(50):
         y_tr = torch.sin(torch.mul(x_tr, C))
         y_pred = sin_net(x_tr)
 
