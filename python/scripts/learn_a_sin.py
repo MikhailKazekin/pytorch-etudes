@@ -5,10 +5,9 @@ from torch.autograd import Variable
 from torch.nn.modules.module import Module
 
 
-class SinNet(Module):
-
+class FuncNet(Module):
     def __init__(self):
-        super(SinNet, self).__init__()
+        super(FuncNet, self).__init__()
 
         H = 20
         self._layers = [
@@ -18,6 +17,7 @@ class SinNet(Module):
         ]
 
         self._model = torch.nn.Sequential(*self._layers)
+
         self._model.cuda()
 
     def forward(self, *input):
@@ -26,33 +26,39 @@ class SinNet(Module):
 
 if __name__ == '__main__':
 
-    sin_net = SinNet()
+    func_net = FuncNet()
 
-    x_tr = Variable(torch.rand(1, 1)).cuda()
-    x_val = Variable(torch.rand(500, 1), requires_grad=False).cuda()
-    x_tr.view()
-    C = 10
-    y_val = torch.sin(torch.mul(x_val, C))
+    loss_fn = torch.nn.MSELoss(size_average=False)
+    loss_val_fn = torch.nn.MSELoss(size_average=False)
 
-    criterion_fn = torch.nn.MSELoss(size_average=False)
-    optimizer = torch.optim.SGD(sin_net.parameters(), lr=1e-4)
+    optimizer = torch.optim.SGD(func_net.parameters(), lr=1e-4)
 
-    for epoch in range(50):
-        y_tr = torch.sin(torch.mul(x_tr, C))
-        y_pred = sin_net(x_tr)
+    C = 100
+    batch_size = 32
+    val_sample_size = 100
 
-        tr_loss = criterion_fn(y_pred, y_tr)
+    f = lambda x: torch.sqrt(x)
 
-        y_pred_val = sin_net(x_val)
-        val_loss = criterion_fn(y_pred_val, y_val)
-        
-        print("Losses: {0:.7f} {0:.7f}".format(tr_loss.data[0], val_loss.data[0]))
+    for epoch in range(50000):
+        sample = torch.mul(torch.rand(batch_size, 1), C)
+        val_sample = torch.mul(torch.rand(val_sample_size, 1), C)
+
+        x = Variable(sample).cuda()
+
+        y_pred = func_net(x)
+        y = f(x)
+
+        tr_loss = loss_fn(y_pred, y)
+
+        x_val = Variable(val_sample, requires_grad=False).cuda()
+        y_val = f(x_val)
+        y_val_pred = func_net(x_val)
+        val_loss = loss_val_fn(y_val_pred, y_val)
+
+        if epoch % 2000 == 0:
+            print(
+            "({2}) Losses: {0:.5f} {1:.5f}".format(tr_loss.data.cpu().numpy()[0], val_loss.data.cpu().numpy()[0], epoch))
 
         optimizer.zero_grad()
         tr_loss.backward()
         optimizer.step()
-
-    x_pred = Variable(torch.mul(torch.rand(500, 1), C), requires_grad=False).cuda()
-    y_pred = sin_net(x_pred)
-
-
